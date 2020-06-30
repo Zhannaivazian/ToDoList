@@ -7,9 +7,6 @@ import org.springframework.context.annotation.Configuration;
 
 import java.time.Clock;
 
-/**
- * Main entry point for the server application.
- */
 @SpringBootApplication
 public class TodoApplication {
 	public static void main(String[] args) {
