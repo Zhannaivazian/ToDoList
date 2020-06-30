@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.redischool.sd2.todo.domain.TodoListService;
+import org.redischool.sd2.todo.domain.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -34,7 +34,7 @@ class TodoServiceControllerTest {
     mockMvc.perform(post("/api/items").content(payload).contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk());
 
-    verify(todoListService).addTask("An item");
+    verify(todoListService).addItem(new OneTimeTask(1, "An item", null));
   }
 
   @Test
@@ -44,7 +44,7 @@ class TodoServiceControllerTest {
     mockMvc.perform(post("/api/items").content(payload).contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk());
 
-    verify(todoListService).addTaskWithDeadline("An item", LocalDate.of(2020, 1, 15));
+    verify(todoListService).addItem(new OneTimeTask(1, "An item", "2020-01-15"));
   }
 
   @ParameterizedTest
@@ -58,7 +58,7 @@ class TodoServiceControllerTest {
     mockMvc.perform(post("/api/items").content(payload).contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk());
 
-    verify(todoListService).addRecurringTask("An item", periodExpected);
+    verify(todoListService).addItem(new RecurringTask(1, "An item", periodAsString, 2));
   }
 
   private static Iterable<Arguments> recurringTaskCases() {
@@ -76,14 +76,14 @@ class TodoServiceControllerTest {
     mockMvc.perform(post("/api/items").content(payload).contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk());
 
-    verify(todoListService).addShoppingItem("An item", 2);
+    verify(todoListService).addItem(new ShoppingList(1,"An item", 2));
   }
 
   @Test
   void shouldCompleteAnItem() throws Exception {
     mockMvc.perform(delete("/api/items/100")).andExpect(status().isOk());
 
-    verify(todoListService).markCompleted("100");
+    verify(todoListService).markCompleted(100);
   }
 
   @Test
@@ -92,4 +92,5 @@ class TodoServiceControllerTest {
 
     verify(todoListService).updateRecurringTasks();
   }
+
 }

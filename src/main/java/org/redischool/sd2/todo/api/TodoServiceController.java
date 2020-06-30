@@ -1,14 +1,14 @@
 package org.redischool.sd2.todo.api;
 
-import org.redischool.sd2.todo.domain.TodoListService;
+import org.redischool.sd2.todo.domain.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 
-import java.time.LocalDate;
+
 import java.time.Period;
-import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -29,29 +29,9 @@ final class TodoServiceController {
 
   @PostMapping("/api/items")
   AddItemResponseDto addItem(@RequestBody AddItemRequestDto addItemDto) {
-    switch (addItemDto.type) {
-      case "TASK":
-        if (addItemDto.deadline != null && !addItemDto.deadline.isEmpty()) {
-          todoListService.addTaskWithDeadline(
-              addItemDto.label, LocalDate.parse(addItemDto.deadline, DateTimeFormatter.ISO_DATE));
-        } else {
-          todoListService.addTask(addItemDto.label);
-        }
-        break;
-      case "RECURRING":
-        todoListService.addRecurringTask(
-            addItemDto.label, toPeriod(addItemDto.frequency, addItemDto.period));
-        break;
-      case "SHOPPING_ITEM":
-        todoListService.addShoppingItem(addItemDto.label, addItemDto.amount);
-        break;
-      default:
-        throw new HttpClientErrorException(
-            HttpStatus.BAD_REQUEST, String.format("Unknown type %s", addItemDto.type));
-    }
-    return new AddItemResponseDto(currentItems());
+    todoListService.addItem(addItemDto.toItem(ItemDto.getNextId()));
+   return new AddItemResponseDto(currentItems());
   }
-
   private Period toPeriod(int frequency, String unit) {
     switch (unit) {
       case "DAY":
@@ -70,7 +50,7 @@ final class TodoServiceController {
 
   @DeleteMapping("/api/items/{id}")
   DeleteItemResponseDto deleteItem(@PathVariable("id") String id) {
-    todoListService.markCompleted(id);
+    todoListService.markCompleted(Long.parseLong(id));
     return new DeleteItemResponseDto(currentItems());
   }
 
@@ -80,11 +60,12 @@ final class TodoServiceController {
   }
 
   private List<ItemDto> currentItems() {
-    return List.of(
-        ItemDto.oneTimeTaskWithLabel("Learn German"),
-        ItemDto.oneTimeTaskWithLabelAndDeadline("Do mid-semester project for ReDI", "2019-12-31"),
-        ItemDto.recurringTaskWithLabel("Do ReDI homework"),
-        ItemDto.shoppingItemWithLabel("Müesli"));
+    List<ItemDto> result = new ArrayList<>();
+    List<Item> items = todoListService.currentItems();
+    for ( Item i : items ) {
+      result.add(i.toDto());
+    }
+   return result;
   }
 
   private static final class FetchItemsResponseDto {
@@ -130,6 +111,19 @@ final class TodoServiceController {
     Integer frequency;
     String period;
     String deadline;
+
+    public Item toItem(long id) {
+      switch (this.type) {
+        case "TASK":
+          return new OneTimeTask(id, this.label, this.deadline);
+        case "RECURRING":
+          return new RecurringTask(id, this.label, this.period, this.frequency);
+        case "SHOPPING_ITEM":
+          return new ShoppingList(id, this.label, this.amount);
+        default:
+          return null;
+      }
+    }
 
     public void setLabel(String label) {
       this.label = label;
